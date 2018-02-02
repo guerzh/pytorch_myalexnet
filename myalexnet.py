@@ -70,7 +70,7 @@ im = imread('laska.png')[:,:,:3]
 im = im - np.mean(im.flatten())
 im = im/np.max(np.abs(im.flatten()))
 
-im = np.rollaxis(im, -1).astype(float32)
+im = np.rollaxis(im, -1).astype(np.float32)
 
 
 
