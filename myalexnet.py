@@ -6,7 +6,8 @@ from torch.autograd import Variable
 
 import numpy as np
 import  matplotlib.pyplot as plt
-from scipy.misc import imread, imresize
+from skimage.transform import resize as imresize
+from matplotlib.pyplot import imread
 
 import torch.nn as nn
 
@@ -16,12 +17,12 @@ from caffe_classes import class_names
 class MyAlexNet(nn.Module):
     def load_weights(self):
         an_builtin = torchvision.models.alexnet(pretrained=True)
-        
+
         features_weight_i = [0, 3, 6, 8, 10]
         for i in features_weight_i:
             self.features[i].weight = an_builtin.features[i].weight
             self.features[i].bias = an_builtin.features[i].bias
-            
+
         classifier_weight_i = [1, 4, 6]
         for i in classifier_weight_i:
             self.classifier[i].weight = an_builtin.classifier[i].weight
@@ -53,7 +54,7 @@ class MyAlexNet(nn.Module):
             nn.ReLU(inplace=True),
             nn.Linear(4096, num_classes),
         )
-        
+
         self.load_weights()
 
     def forward(self, x):
@@ -66,7 +67,23 @@ class MyAlexNet(nn.Module):
 model = MyAlexNet()
 model.eval()
 
-im = imread('laska.png')[:,:,:3]
+im = imread('310.jpg')[:,:,:3]
+if im.shape[0] > 227:
+    im = imresize(im, [227, round(im.shape[1]*227.0/im.shape[0])])
+
+if im.shape[0] > 227:
+    margin_w = int((im.shape[0]-227)/2)
+else:
+    margin_w = 0
+
+if im.shape[1] > 227:
+    margin_h = int((im.shape[1]-227)/2)
+else:
+    margin_h = 0
+
+im = im[margin_w+1:-margin_w-1, margin_h+1:-margin_h-1,:]
+
+
 im = im - np.mean(im.flatten())
 im = im/np.max(np.abs(im.flatten()))
 
@@ -75,8 +92,8 @@ im = np.rollaxis(im, -1).astype(np.float32)
 
 
 
-im_v = Variable(torch.from_numpy(im).unsqueeze_(0), requires_grad=False)    
-softmax = torch.nn.Softmax()
+im_v = Variable(torch.from_numpy(im).unsqueeze_(0), requires_grad=False)
+softmax = torch.nn.Softmax(dim=0)
 
 all_probs = softmax(model.forward(im_v)).data.numpy()[0]
 sorted_ans = np.argsort(all_probs)
@@ -88,6 +105,3 @@ for i in range(-1, -6, -1):
 ans = np.argmax(model.forward(im_v).data.numpy())
 prob_ans = softmax(model.forward(im_v)).data.numpy()[0][ans]
 print("Top Answer:", class_names[ans], "P(ans) = ", prob_ans)
-
-
-
